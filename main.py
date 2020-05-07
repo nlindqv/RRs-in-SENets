@@ -9,7 +9,7 @@ import argparse
 parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
 parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
 parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
-parser.add_argument('--ratios', '-d', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
+parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
 
 args = parser.parse_args()
 
