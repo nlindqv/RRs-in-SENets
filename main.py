@@ -10,6 +10,7 @@ parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
 parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
 parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
 parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
+parser.add_argument('--regularization', '-r', type=float,  default=0.001, help='Amount of L2 regularization used in the ResNet')
 
 args = parser.parse_args()
 
@@ -27,7 +28,7 @@ else:
 L_RATE = 0.001
 EPOCHS = 200
 BATCH_SIZE = 32
-LAMBDA = 0.01
+LAMBDA = args.regularization
 NUM_LAYERS = args.layers
 SE_BLOCKS = args.se_block
 RATIOS = args.ratios
