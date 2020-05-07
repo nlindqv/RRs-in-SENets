@@ -27,6 +27,7 @@ else:
 L_RATE = 0.001
 EPOCHS = 200
 BATCH_SIZE = 32
+LAMBDA = 0.01
 NUM_LAYERS = args.layers
 SE_BLOCKS = args.se_block
 RATIOS = args.ratios
@@ -69,8 +70,9 @@ def main():
     (x_train, y_train), (x_test, y_test) = load_and_preprocess()
 
     n_train = x_train.shape[0]
+    l2_regularizer = tf.keras.regularizers.l2(LAMBDA)
 
-    model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS, ratios=RATIOS)
+    model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS, ratios=RATIOS, regularizer=l2_regularizer)
     crossentropy = tf.keras.losses.CategoricalCrossentropy()
     adam = tf.keras.optimizers.Adam(learning_rate=L_RATE)
 
