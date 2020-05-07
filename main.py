@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
 parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
 parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
 parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
-parser.add_argument('--regularization', '-r', type=float,  default=0.001, help='Amount of L2 regularization used in the ResNet')
+parser.add_argument('--regularization', '-reg', type=float,  default=0.001, help='Amount of L2 regularization used in the ResNet')
 
 args = parser.parse_args()
 
@@ -46,7 +46,7 @@ def load_and_preprocess():
 def update_step(model, x, y, loss_func, optimizer):
     with tf.GradientTape() as tape:
         y_pred = model(x, training=True)
-        loss = loss_func(y, y_pred)
+        loss = loss_func(y, y_pred) + tf.reduce_sum(model.losses)
 
     acc = accuracy(y, y_pred)
     trainable_vars = model.trainable_variables
