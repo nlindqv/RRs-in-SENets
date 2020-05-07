@@ -2,10 +2,13 @@ import tensorflow as tf
 import numpy as np
 import models
 import datetime
+import random
 
 L_RATE = 0.001
-EPOCHS = 10
+EPOCHS = 200
 BATCH_SIZE = 32
+NUM_LAYERS = 20
+SE_BLOCKS = True
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 LOG_DIR = "logs/" + current_time
 
@@ -19,7 +22,7 @@ def load_and_preprocess():
 
 def update_step(model, x, y, loss_func, optimizer):
     with tf.GradientTape() as tape:
-        y_pred = model(x)
+        y_pred = model(x, training=True)
         loss = loss_func(y, y_pred)
 
     acc = accuracy(y, y_pred)
@@ -39,42 +42,45 @@ def accuracy(labels, predictions):
 
 def main():
     summery_writer = tf.summary.create_file_writer(LOG_DIR)
-    print_every_i = 20
+
+    print_every_n = 50
+
     (x_train, y_train), (x_test, y_test) = load_and_preprocess()
-    #x_train, y_train = x_train[:2000], y_train[:2000]
+
     n_train = x_train.shape[0]
-    model = models.ResNet(se_block=False)
+
+    model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS)
     crossentropy = tf.keras.losses.CategoricalCrossentropy()
     adam = tf.keras.optimizers.Adam(learning_rate=L_RATE)
+
     for epoch in range(EPOCHS):
         loss = 0
         acc = 0
         for i in range(int(np.ceil(n_train//BATCH_SIZE))):
             x_batch = x_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
             y_batch = y_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
-            if epoch == 0 and i == 0:
-                tf.summary.trace_on(graph=True, profiler=True)
 
             batch_loss, batch_acc = update_step(model, x_batch, y_batch, loss_func=crossentropy, optimizer=adam)
             loss += batch_loss
             acc += batch_acc
 
-            if i % print_every_i == 0:
+            if i % print_every_n == 0:
                 if i != 0:
-                    loss /= print_every_i
-                    acc /= print_every_i
-                with summery_writer.as_default():
-                    tf.summary.scalar('loss', loss, step=i)
-                    if epoch == 0 and i == 0:
-                        tf.summary.trace_export(
-                            name="my_func_trace",
-                            step=0,
-                            profiler_outdir=LOG_DIR)
+                    loss /= print_every_n
+                    acc /= print_every_n
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
 
-        y_pred_test = model(x_test[:500])
-        acc = accuracy(y_test[:500], y_pred_test)
-        print("Epoch {}, accuracy: {}".format(epoch, acc))
+        y_pred_test = model(x_test[:1000], training=False) # TODO: fixa så att man kan testa hela test set
+        test_acc = accuracy(y_test[:1000], y_pred_test)
+        test_loss = crossentropy(y_test[:1000], y_pred_test)
 
-main()
+        print("Epoch {}, accuracy: {} loss {}".format(epoch, test_acc, test_loss))
+
+        model.save_weights(filepath=LOG_DIR+"/{}ResNet_{}_weights/".format("SE_" if SE_BLOCKS else "", NUM_LAYERS))
+        with summery_writer.as_default():
+            tf.summary.scalar('Test Accuracy', test_acc, step=epoch)
+            tf.summary.scalar('Test Loss', test_loss, step=epoch)
+
+if __name__ == "__main__":
+    main()
