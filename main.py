@@ -3,12 +3,23 @@ import numpy as np
 import models
 import datetime
 import random
+import argparse
+
+
+parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
+parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
+parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
+parser.add_argument('--ratios', '-d', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
+
+args = parser.parse_args()
+
 
 L_RATE = 0.001
 EPOCHS = 200
 BATCH_SIZE = 32
-NUM_LAYERS = 20
-SE_BLOCKS = True
+NUM_LAYERS = args.layers
+SE_BLOCKS = args.se_block
+RATIOS = args.ratios
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 LOG_DIR = "logs/" + current_time
 
@@ -49,7 +60,7 @@ def main():
 
     n_train = x_train.shape[0]
 
-    model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS)
+    model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS, ratios=RATIOS)
     crossentropy = tf.keras.losses.CategoricalCrossentropy()
     adam = tf.keras.optimizers.Adam(learning_rate=L_RATE)
 
