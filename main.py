@@ -14,6 +14,16 @@ parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16],
 args = parser.parse_args()
 
 
+# "Tensorflow code will transparently run on a single GPU with no code changes."
+#  https: // www.tensorflow.org/guide/gpu
+# "Use the following line to confirm that TensorFlow is using the GPU."
+GPUs = tf.config.experimental.list_physical_devices('GPU')
+if GPUs:
+    print('\nYou are using the following GPUs: {}.\n'.format(GPUs))
+else:
+    print('\nYou are currently not using any GPUs.\n')
+
+
 L_RATE = 0.001
 EPOCHS = 200
 BATCH_SIZE = 32
@@ -82,9 +92,9 @@ def main():
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
 
-        y_pred_test = model(x_test[:1000], training=False) # TODO: fixa så att man kan testa hela test set
-        test_acc = accuracy(y_test[:1000], y_pred_test)
-        test_loss = crossentropy(y_test[:1000], y_pred_test)
+        y_pred_test = model(x_test, training=False) # TODO: fixa så att man kan testa hela test set
+        test_acc = accuracy(y_test, y_pred_test)
+        test_loss = crossentropy(y_test, y_pred_test)
 
         print("Epoch {}, accuracy: {} loss {}".format(epoch, test_acc, test_loss))
 
