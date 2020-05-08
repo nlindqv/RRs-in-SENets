@@ -35,13 +35,25 @@ RATIOS = args.ratios
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 LOG_DIR = "logs/" + current_time
 
-def load_and_preprocess():
+def load_dataset():
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
-    x_train = x_train / 255.0
-    x_test = x_test / 255.0
+    x_train_mean = tf.reduce_mean(x_train, axis=0)
+    x_train = (x_train - x_train_mean) / 255
+    x_test = (x_test - x_train_mean) / 255
     y_train = tf.one_hot(y_train[:, 0], depth=10)
     y_test = tf.one_hot(y_test[:, 0], depth=10)
     return (x_train, y_train), (x_test, y_test)
+
+def preprocess_batch(batch_images):
+    batch_images = batch_images.numpy()
+    for i, image in enumerate(batch_images):
+        batch_images[i] = tf.keras.preprocessing.image.random_shift(image,
+                                                             wrg=0.1,
+                                                             hrg=0.1,
+                                                             channel_axis=2)
+    batch_images = tf.image.random_flip_left_right(batch_images)
+
+    return batch_images
 
 def update_step(model, x, y, loss_func, optimizer):
     with tf.GradientTape() as tape:
@@ -68,7 +80,7 @@ def main():
 
     print_every_n = 50
 
-    (x_train, y_train), (x_test, y_test) = load_and_preprocess()
+    (x_train, y_train), (x_test, y_test) = load_dataset()
 
     n_train = x_train.shape[0]
     l2_regularizer = tf.keras.regularizers.l2(LAMBDA)
@@ -82,6 +94,7 @@ def main():
         acc = 0
         for i in range(int(np.ceil(n_train//BATCH_SIZE))):
             x_batch = x_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
+            x_batch = preprocess_batch(x_batch)
             y_batch = y_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
             batch_loss, batch_acc = update_step(model, x_batch, y_batch, loss_func=crossentropy, optimizer=adam)
