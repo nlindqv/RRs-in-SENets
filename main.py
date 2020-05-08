@@ -4,7 +4,7 @@ import models
 import datetime
 import random
 import argparse
-
+import test
 
 parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
 parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
@@ -35,6 +35,19 @@ RATIOS = args.ratios
 current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 LOG_DIR = "logs/" + current_time
 
+def lr_scheduler():
+    global epoch
+    lr = 1e-3
+    if epoch > 180:
+        lr *= 0.5e-3
+    elif epoch > 160:
+        lr *= 1e-3
+    elif epoch > 120:
+        lr *= 1e-2
+    elif epoch > 80:
+        lr *= 1e-1
+    return lr
+
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
     x_train_mean = tf.reduce_mean(x_train, axis=0)
@@ -64,7 +77,6 @@ def update_step(model, x, y, loss_func, optimizer):
     trainable_vars = model.trainable_variables
     grad = tape.gradient(loss, trainable_vars)
     optimizer.apply_gradients(zip(grad, trainable_vars))
-
     return loss.numpy(), acc.numpy()
 
 def accuracy(labels, predictions):
@@ -87,11 +99,14 @@ def main():
 
     model = models.ResNet(depth=NUM_LAYERS, se_block=SE_BLOCKS, ratios=RATIOS, regularizer=l2_regularizer)
     crossentropy = tf.keras.losses.CategoricalCrossentropy()
-    adam = tf.keras.optimizers.Adam(learning_rate=L_RATE)
+    adam = tf.keras.optimizers.Adam(learning_rate=lr_scheduler)
 
+    global epoch
     for epoch in range(EPOCHS):
         loss = 0
         acc = 0
+        print("Epoch learning rate: ", adam.get_config()['learning_rate'])
+
         for i in range(int(np.ceil(n_train//BATCH_SIZE))):
             x_batch = x_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
             x_batch = preprocess_batch(x_batch)
@@ -108,7 +123,7 @@ def main():
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
 
-        y_pred_test = model(x_test, training=False) # TODO: fixa så att man kan testa hela test set
+        y_pred_test = model(x_test, training=False)
         test_acc = accuracy(y_test, y_pred_test)
         test_loss = crossentropy(y_test, y_pred_test)
 
