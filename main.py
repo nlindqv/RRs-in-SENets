@@ -20,12 +20,20 @@ def lr_scheduler():
 
 def load_dataset():
     (x_train, y_train), (x_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    print(x_train.shape, y_train.shape)
     x_train_mean = tf.reduce_mean(x_train, axis=0)
     x_train = (x_train - x_train_mean) / 255
     x_test = (x_test - x_train_mean) / 255
     y_train = tf.one_hot(y_train[:, 0], depth=10)
     y_test = tf.one_hot(y_test[:, 0], depth=10)
     return (x_train, y_train), (x_test, y_test)
+
+def shuffle(x, y):
+    x = x.numpy()
+    permute =  np.random.permutation(x[0])
+    x = x[permute]
+    y = y[permute]
+    return (x, y)
 
 def preprocess_batch(batch_images):
     batch_images = batch_images.numpy()
@@ -78,10 +86,12 @@ def main():
         acc = 0
         print("Epoch learning rate: ", adam.get_config()['learning_rate'])
 
+
         for i in range(int(np.ceil(n_train//BATCH_SIZE))):
             x_batch = x_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
             x_batch = preprocess_batch(x_batch)
             y_batch = y_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
+            (x_batch, y_batch) = shuffle(x_batch, y_batch)
 
             batch_loss, batch_acc = update_step(model, x_batch, y_batch, loss_func=crossentropy, optimizer=adam)
             loss += batch_loss
