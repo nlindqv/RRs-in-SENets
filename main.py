@@ -2,38 +2,8 @@ import tensorflow as tf
 import numpy as np
 import models
 import datetime
-import random
 import argparse
-import test
-
-parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
-parser.add_argument('--layers', '-l', type=int,  required=True, help='Number of layers in the ResNet.')
-parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
-parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16], help='Reduction ratios for each SE-block')
-parser.add_argument('--regularization', '-reg', type=float,  default=0.001, help='Amount of L2 regularization used in the ResNet')
-
-args = parser.parse_args()
-
-
-# "Tensorflow code will transparently run on a single GPU with no code changes."
-#  https: // www.tensorflow.org/guide/gpu
-# "Use the following line to confirm that TensorFlow is using the GPU."
-GPUs = tf.config.experimental.list_physical_devices('GPU')
-if GPUs:
-    print('\nYou are using the following GPUs: {}.\n'.format(GPUs))
-else:
-    print('\nYou are currently not using any GPUs.\n')
-
-
-L_RATE = 0.001
-EPOCHS = 200
-BATCH_SIZE = 32
-LAMBDA = args.regularization
-NUM_LAYERS = args.layers
-SE_BLOCKS = args.se_block
-RATIOS = args.ratios
-current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-LOG_DIR = "logs/" + current_time
+import os
 
 def lr_scheduler():
     global epoch
@@ -103,6 +73,7 @@ def main():
 
     global epoch
     for epoch in range(EPOCHS):
+        epoch_loss = 0
         loss = 0
         acc = 0
         print("Epoch learning rate: ", adam.get_config()['learning_rate'])
@@ -115,24 +86,59 @@ def main():
             batch_loss, batch_acc = update_step(model, x_batch, y_batch, loss_func=crossentropy, optimizer=adam)
             loss += batch_loss
             acc += batch_acc
-
+            epoch_loss += batch_loss
             if i % print_every_n == 0:
                 if i != 0:
                     loss /= print_every_n
                     acc /= print_every_n
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
-
+        epoch_loss /= int(np.ceil(n_train//BATCH_SIZE))
         y_pred_test = model(x_test, training=False)
         test_acc = accuracy(y_test, y_pred_test)
-        test_loss = crossentropy(y_test, y_pred_test)
+        test_loss = crossentropy(y_test, y_pred_test) #TODO: räknar den loss per batch size?
 
         print("Epoch {}, accuracy: {} loss {}".format(epoch, test_acc, test_loss))
 
-        model.save_weights(filepath=LOG_DIR+"/{}ResNet_{}_weights/".format("SE_" if SE_BLOCKS else "", NUM_LAYERS))
+        save_directory = LOG_DIR+"/{}ResNet_{}_weights/".format("SE_" if SE_BLOCKS else "", NUM_LAYERS)
+        try:
+            os.mkdir(save_directory)
+        except FileExistsError:
+            pass
+        model.save_weights(filepath=save_directory + "checkpoint", save_format='h5')
         with summery_writer.as_default():
             tf.summary.scalar('Test Accuracy', test_acc, step=epoch)
             tf.summary.scalar('Test Loss', test_loss, step=epoch)
+            tf.summary.scalar('Training Loss', epoch_loss, step=epoch)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='ResNet Hyper Parameters')
+    parser.add_argument('--layers', '-l', type=int, required=True, help='Number of layers in the ResNet.')
+    parser.add_argument('--se-block', '-s', action='store_true', default=False, help='Use SE-block.')
+    parser.add_argument('--ratios', '-r', type=int, nargs='+', default=[16, 16, 16],
+                        help='Reduction ratios for each SE-block')
+    parser.add_argument('--regularization', '-reg', type=float, default=0.0001,
+                        help='Amount of L2 regularization used in the ResNet')
+
+    args = parser.parse_args()
+
+    # "Tensorflow code will transparently run on a single GPU with no code changes."
+    #  https: // www.tensorflow.org/guide/gpu
+    # "Use the following line to confirm that TensorFlow is using the GPU."
+    GPUs = tf.config.experimental.list_physical_devices('GPU')
+    if GPUs:
+        print('\nYou are using the following GPUs: {}.\n'.format(GPUs))
+    else:
+        print('\nYou are currently not using any GPUs.\n')
+
+    L_RATE = 0.001
+    EPOCHS = 200
+    BATCH_SIZE = 32
+    LAMBDA = args.regularization
+    NUM_LAYERS = args.layers
+    SE_BLOCKS = args.se_block
+    RATIOS = args.ratios
+    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    LOG_DIR = "logs/" + current_time
+
     main()
