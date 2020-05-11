@@ -99,8 +99,8 @@ def main():
             epoch_loss += batch_loss
             if i % print_every_n == 0:
                 if i != 0:
-                    loss /= print_every_n
-                    acc /= print_every_n
+                    loss /= print_every_n + 1
+                    acc /= print_every_n + 1
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
         epoch_loss /= int(np.ceil(n_train//BATCH_SIZE))
