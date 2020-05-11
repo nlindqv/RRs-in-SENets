@@ -91,7 +91,7 @@ def main():
             x_batch = x_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
             x_batch = preprocess_batch(x_batch)
             y_batch = y_train[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
-            (x_batch, y_batch) = shuffle(x_batch, y_batch)
+            # (x_batch, y_batch) = shuffle(x_batch, y_batch)
 
             batch_loss, batch_acc = update_step(model, x_batch, y_batch, loss_func=crossentropy, optimizer=adam)
             loss += batch_loss
