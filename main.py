@@ -103,6 +103,7 @@ def main():
                     acc /= print_every_n + 1
                 print("Epoch {} Iteration {}/{} Loss {} Acc {}".format(epoch, i, n_train//BATCH_SIZE, loss, acc))
                 loss = 0
+                acc = 0
         epoch_loss /= int(np.ceil(n_train//BATCH_SIZE))
         y_pred_test = model(x_test, training=False)
         test_acc = accuracy(y_test, y_pred_test)
